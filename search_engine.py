@@ -3,7 +3,7 @@ import webdev
 def crawlWeb():
     canditates = []#contains URLs of pages that the web crawler has discovered and could read/save
     crawled = []#contains URLs that the web crawler has already saved
-    maxPages = 5
+    maxPages = 10
     outfile = open('pages.txt', 'w')
     linkFreq = {}
 
@@ -41,7 +41,6 @@ def crawlWeb():
         outfile.write(str(round(linkFreq[url]/totalReferrals,4))+'\n')
     outfile.close()
 
-
 pageFreqCache = {}#nested dictionary cache to store all words and their frequencies for every page
 pagePopValue = {}
 
@@ -60,10 +59,7 @@ def totalValues(freqDict):
         total += freqDict[value]
     return total
 
-#returns the page(file) that has the most occurrences of the search word
-def mostOccurences(pages, searchWord):
-    pageFreq = {}#frequency dictionary for current searchword (keys = pages, values = frequency of the search word)
-    pageFreqRatio = {}
+def updateFreqCache(pages):
     for page in pages:
         if page not in pageFreqCache:
             infile = open(page,'r')
@@ -71,48 +67,43 @@ def mostOccurences(pages, searchWord):
             lines.pop(-1)
             pageFreqCache[page] = {}
             for line in lines:
-                word = line.split()[0]
+                word = line.split()[0].upper()
                 frequency = int(line.split()[1])
                 pageFreqCache[page][word]=frequency
-        if searchWord not in pageFreqCache[page]:
-            pageFreq[page] = 0
-            pageFreqRatio[page] = 0
-        else:
-            pageFreq[page] = pageFreqCache[page][searchWord]
-            pageFreqRatio[page] = pageFreqCache[page][searchWord]/totalValues(pageFreqCache[page])
-
-    mostFreqPage =  mostFreq(pageFreq)
-    highestRatioPage =  mostFreq(pageFreqRatio)
-
-    '''
-    if(pageFreq[mostFreqPage]==0):
-        print('No matches found.')
-    else:
-        print('Max page (Count): ', mostFreqPage)
-        print('Max Count: ', pageFreq[mostFreqPage])
-        print('Max page (Ratio): ', highestRatioPage)
-        print('Max Ratio: ', round(pageFreqRatio[highestRatioPage],4))
-        '''
 
 def updatePagePopularity(filename):
     infile = open(filename, 'r')
-    page = ''
-    numLinks = 0
     line = infile.readline()
     while(line!='\n'):
         page = line.strip()[line.rfind('/')+1:]+'.txt'
-        numLinks = int(infile.readline())
+        numLinks = float(infile.readline())
         pagePopValue[page] = numLinks
         line = infile.readline()
 
 def similarity(page, words):
     totalFreq = 0
     for word in words:
-        totalFreq += pageFreqCache[page][word]
-    return totalFreq/totalValues(pageFreqCache[page])
+        if word.upper() not in pageFreqCache[page]: continue
+        totalFreq += pageFreqCache[page][word.upper()]
+    return 0 if len(pageFreqCache[page])==0 else totalFreq/totalValues(pageFreqCache[page])
 
 def popularity(page):
-    return pagePopValue[page]
+    return 0 if page not in pagePopValue else pagePopValue[page]
+
+def topSearchResults(pages, words):
+    popWeight = 0.2
+    relatedWeight = 0.8
+    topPages = []
+    for i in range(3):
+        highestValue = 0
+        curTopPage = ''
+        for page in pages:
+            curValue = similarity(page, words)*relatedWeight + popularity(page)*popWeight
+            if curValue > highestValue and page not in topPages:
+                highestValue = curValue
+                curTopPage = page
+        topPages.append(curTopPage)
+    return topPages
 
 def main():
     crawlWeb()
@@ -121,11 +112,12 @@ def main():
     pages.pop(-1)
     infile.close()
     updatePagePopularity('page_popularity.txt')
+    updateFreqCache(pages)
     while True:
-        searchWords = input('Enter a word to search for (Enter q to quit): ')
-        if searchWord == 'q': break
-        mostOccurences(pages, searchWord)
-
+        searchWords = input('Search (Enter q to quit): ')
+        if searchWords.upper() == 'Q': break
+        topPages = topSearchResults(pages, searchWords.split())
+        print('Top search results:\n'+topPages[0]+'\n'+topPages[1]+'\n'+topPages[2]+'\n')
 
 if __name__ == "__main__":
     main()
