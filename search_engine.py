@@ -3,7 +3,7 @@ import webdev
 def crawlWeb():
     canditates = []#contains URLs of pages that the web crawler has discovered and could read/save
     crawled = []#contains URLs that the web crawler has already saved
-    maxPages = 10
+    maxPages = 30
     outfile = open('pages.txt', 'w')
     linkFreq = {}
 
@@ -20,8 +20,11 @@ def crawlWeb():
             linkFreq[url]+=1
         pageContent = webdev.striphtml(pageContent)
         filename = currentURL[currentURL.rfind('/')+1:]+'.txt'
-        outfile.write(filename+'\n')
-        out = open(filename,'w')
+        alnumFilename = ""
+        for character in filename:#removes special characters from filename
+            if character.isalnum() or character=='.': alnumFilename += character
+        outfile.write(alnumFilename+'\n')
+        out = open(alnumFilename,'w',encoding="utf-8")
         wordList = pageContent.split()
         wordFreq = {}
         for word in wordList:
@@ -62,7 +65,7 @@ def totalValues(freqDict):
 def updateFreqCache(pages):
     for page in pages:
         if page not in pageFreqCache:
-            infile = open(page,'r')
+            infile = open(page,'r',encoding="utf-8")
             lines = infile.read().split('\n')
             lines.pop(-1)
             pageFreqCache[page] = {}
